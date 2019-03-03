@@ -1,13 +1,16 @@
 import os
+import re
+import sys
 import pickle
 import csv
 from collections import Counter
 
-PATH = "NaiveBayes/TrainsetTugas1ML.csv"
-#TESTPATH = "NaiveBayes/TestTugas1ML.csv"
-TESTPATH = "NaiveBayes/TrainsetTugas1ML.csv"
-TABLEPATH = "NaiveBayes/Table.dat"
-DEBUG = True
+PATH = "TrainsetTugas1ML.csv"
+TESTPATH = "TestTugas1ML.csv"
+#TESTPATH = "NaiveBayes/TrainsetTugas1ML.csv"
+TABLEPATH = "Table.dat"
+DEBUG = False
+LEARN = False
 
 data = []
 testData = []
@@ -25,10 +28,11 @@ def GenerateTable(d):
     with open(TABLEPATH, "wb") as f:
         pickle.dump(d,f)
         f.close()
-    return None
+    print("Hasil pembelajaran ditulis ke" + os.getcwd() + "/" + TABLEPATH)
 
 def ProcessData():
     with open(PATH) as csvfile:
+        print("Membaca file " + os.getcwd() + "/" + PATH)
         reader = csv.reader(csvfile, quotechar="|")
         collums = next(reader)
         for c in collums:
@@ -46,7 +50,11 @@ def ProcessData():
         for k in cols:
             dic[k[0]] = dict(Counter(k[1]))
 
-        del dic["id"]
+        try:
+            del dic["id"]
+        except Exception as identifier:
+            print("WARN: field ID tidak ada")
+        
         #print(dic)
 
         ##################TOTAL
@@ -98,10 +106,17 @@ def ProcessData():
                 print("=",key, val)
                     #if(v[0] == 0): foundZero = True
         dic["totalData"] = len(data)
+        print("Learning OK")
         return dic         
 
+def WriteCsv(path, data, label = []):
+    wtr = csv.writer(open (path, 'w'), delimiter=',', lineterminator='\n')
+    data.insert(0, label)
+    for x in data : 
+        wtr.writerow (x)
+    print("File ditulis di lokasi " + os.getcwd() + "/" + path)
+
 def Learn():
-    print(os.getcwd())
     t = ProcessData()
     GenerateTable(t)
     if(DEBUG):
@@ -109,12 +124,13 @@ def Learn():
             d.pop(0)
             print(d)
     
-def Classify(data):
+def Classify():
     totalData = 0
     with open(TABLEPATH, 'rb') as file:
         classifierData = pickle.load(file)
 
     totalData = classifierData["totalData"]
+    idArray = []
     del classifierData["totalData"]
     with open(TESTPATH) as csvfile: 
         reader = csv.reader(csvfile, quotechar="|")
@@ -124,11 +140,10 @@ def Classify(data):
             cols.append((c, []))
         for row in reader:
             testData.append(row)
-            testData[testData.index(row)].pop(0)
+            idArray.append(testData[testData.index(row)].pop(0))
             testData[testData.index(row)].pop()
-        #print(classifierData)
-        #print(testData)
 
+        no = 0
         for row in testData:
             classifierAttr = list(classifierData)
   
@@ -156,10 +171,28 @@ def Classify(data):
                 evaluatedClass[k] = totalValue
                 klassIndex += 1
             result = max(evaluatedClass, key=evaluatedClass.get)
+            
+            row.insert(0, idArray[no])
             row.append(result)
+            
+            no += 1
     if(DEBUG):
         for d in testData:
             print(d)
+    
+    print("Klasifikasi OK")
+    return testData
 
-#Learn()
-Classify(None)
+def CheckArgv():
+    global LEARN
+    global DEBUG
+    if(len(sys.argv) == 1):
+        print("Set argument learning=true to learn, debug=true for debug")
+    if("learning=true" in sys.argv): LEARN = True
+    if("debug=true" in sys.argv): DEBUG = True
+    
+
+CheckArgv()
+if(LEARN): Learn()
+d = Classify()
+WriteCsv("TebakanTugas1ML.csv", d, label=["id","age","workclass","education","marital-status","occupation","relationship","hours-per-week","income"])
