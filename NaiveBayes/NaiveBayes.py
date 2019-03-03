@@ -1,9 +1,16 @@
-
+import os
+import pickle
 import csv
 from collections import Counter
 
+PATH = "NaiveBayes/TrainsetTugas1ML.csv"
+#TESTPATH = "NaiveBayes/TestTugas1ML.csv"
+TESTPATH = "NaiveBayes/TrainsetTugas1ML.csv"
+TABLEPATH = "NaiveBayes/Table.dat"
+DEBUG = True
 
 data = []
+testData = []
 cols = []
 
 def is_sublist(a, b):
@@ -12,15 +19,16 @@ def is_sublist(a, b):
     return b[:len(a)] == a or is_sublist(a, b[1:])
 
 def GenerateTable(d):
-    for key, val in d.items():
-        for k,v in val.items():
-            print(k, " ", v)
-
-    print("")
+    #for key, val in d.items():
+    #    for k,v in val.items():
+    #        print(k, " ", v)
+    with open(TABLEPATH, "wb") as f:
+        pickle.dump(d,f)
+        f.close()
     return None
 
 def ProcessData():
-    with open("TrainsetTugas1ML.csv") as csvfile:
+    with open(PATH) as csvfile:
         reader = csv.reader(csvfile, quotechar="|")
         collums = next(reader)
         for c in collums:
@@ -44,7 +52,7 @@ def ProcessData():
         ##################TOTAL
         foundZero = False
         for key,val in dic.items():
-            print(key, val)
+            #print(key, val)
 
             for k, v in val.items():
             
@@ -89,11 +97,69 @@ def ProcessData():
                                     val[k][j][i] += 1
                 print("=",key, val)
                     #if(v[0] == 0): foundZero = True
-        return dic;           
+        dic["totalData"] = len(data)
+        return dic         
 
-def Main():
+def Learn():
+    print(os.getcwd())
     t = ProcessData()
     GenerateTable(t)
+    if(DEBUG):
+        for d in data:
+            d.pop(0)
+            print(d)
+    
+def Classify(data):
+    totalData = 0
+    with open(TABLEPATH, 'rb') as file:
+        classifierData = pickle.load(file)
+
+    totalData = classifierData["totalData"]
+    del classifierData["totalData"]
+    with open(TESTPATH) as csvfile: 
+        reader = csv.reader(csvfile, quotechar="|")
+        collums = next(reader)
+        collums.pop()
+        for c in collums:
+            cols.append((c, []))
+        for row in reader:
+            testData.append(row)
+            testData[testData.index(row)].pop(0)
+            testData[testData.index(row)].pop()
+        #print(classifierData)
+        #print(testData)
+
+        for row in testData:
+            classifierAttr = list(classifierData)
+  
+            totalValue = 0
+
+            classKey = classifierData[classifierAttr[-1]]
+            evaluatedClass = dict()
+            klassIndex = 0
+            for k in classKey.keys():
+                evaluatedClass[k] = 0
+                i = 0
+                totalValue = 1
+                for attr in row:
+                    key = classifierAttr[i]
+                    attrToMatch = classifierData[key]
     
 
-Main()
+                    klass = attrToMatch[attr]       
+
+
+                    klass[klassIndex]
+                    totalValue *= klass[klassIndex][0]/klass[klassIndex][1]
+                    #totalValue *= classifyTarget[0]/classifyTarget[1]
+                    i+=1
+                evaluatedClass[k] = totalValue
+                klassIndex += 1
+            result = max(evaluatedClass, key=evaluatedClass.get)
+            row.append(result)
+    if(DEBUG):
+        for d in testData:
+            print(d)
+
+#Learn()
+Classify(None)
